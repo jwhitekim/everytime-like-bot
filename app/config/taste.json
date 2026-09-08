@@ -27,7 +27,7 @@
     "exploration": 0.07,
     "penalty_strength": 1.0,
     "min_confidence": 0.45,
-    "target_like_rate": 0.15
+    "target_like_rate": 0.25
   },
 
   "hard_reject": {
