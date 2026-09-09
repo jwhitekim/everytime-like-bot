@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -34,12 +33,9 @@ _COMMAND_LIST = (
 )
 
 _PROFILE_LABELS = {
-    "usefulness": "정보성", "originality": "독창성", "topic_relevance": "관심주제",
-    "technical_depth": "기술적 깊이", "humor": "유머", "novelty": "새로움",
-    "personal_interest": "개인적 흥미", "clarity": "명확성", "effort": "노력",
-    "information_density": "정보 밀도", "emotionality": "감성 자극",
-    "controversy": "논쟁 회피", "promotion": "광고 회피", "clickbait": "낚시 회피",
-    "toxicity": "혐오 회피", "repetitiveness": "재탕 회피",
+    "topic_relevance": "관심주제", "effort": "노력", "information_density": "정보 밀도",
+    "promotion": "광고 회피", "toxicity": "혐오 회피", "clickbait": "낚시 회피",
+    "controversy": "논쟁 회피", "repetitiveness": "재탕 회피",
 }
 
 

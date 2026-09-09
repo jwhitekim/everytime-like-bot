@@ -1,6 +1,6 @@
 """게시글 선별 파이프라인의 오케스트레이터.
 
-crawl_post() -> hard_filter() -> evaluate_features_with_llm() -> calculate_score()
+crawl_post() -> hard_filter() -> evaluate_features() -> calculate_score()
     -> apply_hard_reject() -> make_decision() -> (dry_run OR like_post()) -> save_result()
 
 vote_runner.run_vote()가 기대하는 interest_decider 인터페이스(should_vote(article) -> bool | None)
@@ -45,7 +45,7 @@ class PostEvaluator:
 
         features = self.feature_client.evaluate(article)
         if features is None:
-            # 일시적 LLM 실패. 저장하지 않아야 다음 실행에서 다시 시도한다.
+            # 특성 계산 실패(예상 밖 예외). 저장하지 않아야 다음 실행에서 다시 시도한다.
             return None
 
         decision, score_result = self._score_and_log(post_id, features)
@@ -59,7 +59,7 @@ class PostEvaluator:
         return decision == "LIKE"
 
     def _decide_from_cache(self, post_id, cached: dict) -> bool | None:
-        """캐시된 feature_scores로 현재 taste_cfg를 재적용한다 (LLM은 다시 호출하지 않음).
+        """캐시된 feature_scores로 현재 taste_cfg를 재적용한다 (특성 재계산은 하지 않음).
 
         hard_filter로 걸러졌던 글(feature_scores가 비어 있음)은 재평가할 특성이 없으므로
         저장된 결정을 그대로 재사용한다.

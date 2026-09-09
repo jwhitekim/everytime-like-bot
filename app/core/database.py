@@ -217,6 +217,24 @@ def save_evaluated_post(
     }))
 
 
+_RECENT_FINGERPRINTS_LIMIT = 50
+
+
+def get_recent_post_fingerprints(board_id: str) -> list[list[str]]:
+    """repetitiveness 계산용 — 게시판별 최근 게시글의 토큰 목록."""
+    raw = db.load(f"recent_fingerprints:{board_id}")
+    try:
+        return json.loads(raw) if raw else []
+    except Exception:
+        return []
+
+
+def add_post_fingerprint(board_id: str, tokens: list[str]) -> None:
+    fingerprints = get_recent_post_fingerprints(board_id)
+    fingerprints.append(tokens)
+    db.save(f"recent_fingerprints:{board_id}", json.dumps(fingerprints[-_RECENT_FINGERPRINTS_LIMIT:]))
+
+
 def delete_run_stat(idx: int) -> bool:
     history = load_run_history()
     if not (0 <= idx < len(history)):

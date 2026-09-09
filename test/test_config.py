@@ -18,20 +18,20 @@ class TasteConfigValidationTests(unittest.TestCase):
 
     def test_missing_file_falls_back_to_defaults(self):
         cfg = load_taste_config(Path("/nonexistent/taste.json"))
-        self.assertIn("usefulness", cfg["preferences"])
+        self.assertIn("topic_relevance", cfg["preferences"])
         self.assertEqual(cfg["decision"]["threshold"], 0.31)
 
     def test_out_of_range_preference_is_clamped(self):
-        cfg = self._load({"preferences": {"usefulness": 2.0}})
-        self.assertEqual(cfg["preferences"]["usefulness"], 1.0)
+        cfg = self._load({"preferences": {"topic_relevance": 2.0}})
+        self.assertEqual(cfg["preferences"]["topic_relevance"], 1.0)
 
     def test_negative_penalty_is_clamped_to_zero(self):
         cfg = self._load({"penalties": {"promotion": -0.5}})
         self.assertEqual(cfg["penalties"]["promotion"], 0.0)
 
     def test_non_numeric_value_falls_back_to_default(self):
-        cfg = self._load({"preferences": {"usefulness": "very high"}})
-        self.assertEqual(cfg["preferences"]["usefulness"], 0.9)  # DEFAULT_TASTE_CONFIG 값
+        cfg = self._load({"preferences": {"topic_relevance": "very high"}})
+        self.assertEqual(cfg["preferences"]["topic_relevance"], 0.9)  # DEFAULT_TASTE_CONFIG 값
 
     def test_unknown_preference_key_is_dropped(self):
         cfg = self._load({"preferences": {"made_up_feature": 0.9}})

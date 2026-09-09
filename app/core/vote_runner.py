@@ -1,14 +1,19 @@
 import logging
 import random
 import time
-import json
 
 from .clients.everytime import EverytimeClient
-from .clients.gemini import GeminiFeatureEvaluator
 from .services import score_calculator
+from .services.feature_scorer import FeatureScorer
 from .services.post_evaluator import PostEvaluator
-from .database import db
-from ..config import PAGE_NUM, BOARD_PAGE_SIZE, CHECKPOINT_SEARCH_MAX_PAGES, get_gemini_settings, get_dry_run, load_taste_config
+from .database import db, get_recent_post_fingerprints, add_post_fingerprint
+from ..config import (
+    PAGE_NUM,
+    BOARD_PAGE_SIZE,
+    CHECKPOINT_SEARCH_MAX_PAGES,
+    get_dry_run,
+    load_taste_config,
+)
 
 
 def run_vote(
@@ -223,7 +228,7 @@ class VoteRunner:
                     if not a.get("posvote"):
                         if self.client.delete_article(a["id"]):
                             logging.info(
-                                f"[VoteRunner] 본인 게시글 삭제 완료: ",
+                                "[VoteRunner] 본인 게시글 삭제 완료: ",
                                 extra={
                                     "article_id": a["id"], 
                                     "title": a.get("title"), 
@@ -236,7 +241,6 @@ class VoteRunner:
     def start(self, progress_callback=None, skip_keywords: list[str] | None = None) -> dict:
         if not self.target_board:
             raise ValueError("게시판이 선택되지 않았습니다. 텔레그램에서 /setboard를 먼저 실행하세요.")
-        api_key, model = get_gemini_settings()
         dry_run = get_dry_run()
         taste_cfg = load_taste_config()
 
@@ -255,7 +259,12 @@ class VoteRunner:
                 f"(목표 비율 {target_like_rate:.0%}, 최근 표본 {len(recent_scores)}개)"
             )
 
-        feature_client = GeminiFeatureEvaluator(api_key, model=model, topics=taste_cfg.get("topics"))
+        feature_client = FeatureScorer(
+            topics=taste_cfg.get("topics"),
+            keywords=taste_cfg.get("keywords"),
+            recent_fingerprints_provider=lambda: get_recent_post_fingerprints(self.target_board),
+            record_fingerprint=lambda tokens: add_post_fingerprint(self.target_board, tokens),
+        )
         interest_decider = PostEvaluator(
             feature_client,
             taste_cfg,

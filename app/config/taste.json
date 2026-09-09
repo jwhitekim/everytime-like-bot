@@ -1,24 +1,16 @@
 {
   "preferences": {
-    "usefulness": 0.9,
-    "humor": 0.45,
-    "originality": 0.85,
-    "technical_depth": 0.7,
-    "emotionality": 0.2,
-    "topic_relevance": 0.95,
-    "novelty": 0.75,
-    "personal_interest": 0.8,
-    "clarity": 0.55,
-    "effort": 0.6,
-    "information_density": 0.7
+    "topic_relevance": 0.9,
+    "effort": 0.5,
+    "information_density": 0.5
   },
 
   "penalties": {
-    "controversy": 0.6,
     "promotion": 1.0,
-    "clickbait": 0.85,
     "toxicity": 1.0,
-    "repetitiveness": 0.7
+    "clickbait": 0.7,
+    "controversy": 0.5,
+    "repetitiveness": 0.6
   },
 
   "decision": {
@@ -31,12 +23,18 @@
   },
 
   "hard_reject": {
-    "promotion": 0.92,
-    "toxicity": 0.90,
-    "clickbait": 0.95
+    "promotion": 0.85,
+    "toxicity": 0.7
   },
 
   "topics": [],
+
+  "keywords": {
+    "toxicity": ["씨발", "병신", "지랄", "미친놈", "미친년", "개새끼", "닥쳐", "꺼져"],
+    "controversy": ["정치", "페미", "남혐", "여혐", "지역감정", "종교", "동성애"],
+    "clickbait_phrases": ["충격", "실화냐", "레전드", "헐", "대박", "미쳤다", "지금 아니면", "곧 삭제"],
+    "promotion_terms": ["문의", "카톡", "오픈채팅", "구매대행", "판매합니다", "가격문의", "할인", "이벤트", "홍보"]
+  },
 
   "hard_filter": {
     "max_age_days": null
