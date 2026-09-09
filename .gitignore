@@ -29,3 +29,7 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# todo-guard local machine state (not shareable across machines)
+.claude/settings.json.bak-*
+.claude/todo-guard.json
