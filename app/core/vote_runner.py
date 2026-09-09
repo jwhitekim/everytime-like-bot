@@ -8,7 +8,7 @@ from .clients.gemini import GeminiFeatureEvaluator
 from .services import score_calculator
 from .services.post_evaluator import PostEvaluator
 from .database import db
-from ..config import PAGE_NUM, BOARD_PAGE_SIZE, get_gemini_settings, get_dry_run, load_taste_config
+from ..config import PAGE_NUM, BOARD_PAGE_SIZE, CHECKPOINT_SEARCH_MAX_PAGES, get_gemini_settings, get_dry_run, load_taste_config
 
 
 def run_vote(
@@ -74,14 +74,14 @@ def run_vote(
         _, found_idx = client.find_article(
             target_board,
             checkpoint_id,
-            max_pages=max_pages,
+            max_pages=CHECKPOINT_SEARCH_MAX_PAGES,
             page_delay=cfg["timing"]["page_delay"],
         )
 
         if found_idx == -1:
             logging.warning("체크포인트 게시글을 찾지 못했습니다 (게시글 삭제 추정). 스캔된 범위만 처리합니다.")
             checkpoint_found = False
-            for i in range(max_pages):
+            for i in range(CHECKPOINT_SEARCH_MAX_PAGES):
                 final_page = i + 1
                 page_articles = client.get_article_ids(target_board, start_num=i * 20)
                 if not page_articles:
@@ -91,7 +91,7 @@ def run_vote(
                     first_article_id = page_articles[0]["id"]
                 articles_to_vote.extend(page_articles)
                 time.sleep(cfg["timing"]["page_delay"])
-            scan_limit_reached = final_page >= max_pages
+            scan_limit_reached = final_page >= CHECKPOINT_SEARCH_MAX_PAGES
         else:
             checkpoint_found = True
             offset = 0

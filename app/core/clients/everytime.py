@@ -73,6 +73,8 @@ class EverytimeClient:
         offset = 0
         for _ in range(max_pages):
             articles = self.get_article_ids(board_id, start_num=offset)
+            if not articles:
+                break
             for item in articles:
                 if item["id"] == before_article_id:
                     return count, articles.index(item)

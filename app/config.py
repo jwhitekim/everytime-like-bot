@@ -188,7 +188,12 @@ EVERYTIME_USER_AGENT = (
 BOARD_PAGE_SIZE = 10
 
 # Page size for article listing
-PAGE_NUM = 20 
+PAGE_NUM = 20
+
+# 체크포인트 게시글을 찾을 때는 bot.max_pages(초기 스캔 한도)와 무관하게 더 넓게 탐색한다.
+# 봇이 오래 쉬었다 재개하면 체크포인트 글이 초기 스캔 한도보다 뒤 페이지에 있을 수 있는데,
+# 여기서도 같은 한도를 쓰면 아직 살아있는 글을 삭제된 것으로 오인해 그 사이 글들을 놓친다.
+CHECKPOINT_SEARCH_MAX_PAGES = 200
 
 # Autonomy scheduling
 AUTONOMY_WINDOW_A = ((6, 0), (9, 0))
