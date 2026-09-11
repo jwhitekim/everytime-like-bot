@@ -75,13 +75,12 @@ class PostEvaluator:
         return decision == "LIKE"
 
     def _score_and_log(self, post_id, features: dict, *, note: str | None = None) -> tuple[str, dict]:
-        confidence = features.get("confidence", 0.0)
         score_result = sc.calculate_score(features, self.taste_cfg)
         hard_reject_reason = sc.apply_hard_reject(features, self.taste_cfg.get("hard_reject"))
         decision, reason = sc.make_decision(
-            score_result, confidence, self.taste_cfg, hard_reject_reason=hard_reject_reason
+            score_result, self.taste_cfg, hard_reject_reason=hard_reject_reason
         )
-        self._log(post_id, features, score_result, confidence, decision, reason, note=note)
+        self._log(post_id, features, score_result, decision, reason, note=note)
         return decision, score_result
 
     def mark_liked(self, post_id) -> None:
@@ -111,7 +110,7 @@ class PostEvaluator:
             liked=liked,
         )
 
-    def _log(self, post_id, features, score_result, confidence, decision, reason, *, note: str | None = None) -> None:
+    def _log(self, post_id, features, score_result, decision, reason, *, note: str | None = None) -> None:
         preferences = self.taste_cfg.get("preferences", {})
         penalties = self.taste_cfg.get("penalties", {})
         positive_contrib = sc.compute_contributions(features, preferences)
@@ -125,7 +124,6 @@ class PostEvaluator:
             f"positive: {score_result['positive_score']:.3f}",
             f"penalty: {score_result['penalty_score']:.3f}",
             f"final: {score_result['final_score']:.3f}",
-            f"confidence: {confidence:.2f}",
             "TOP POSITIVE",
         ]
         lines += [f"{name} +{value:.3f}" for name, value in top_positive]

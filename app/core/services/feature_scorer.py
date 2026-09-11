@@ -14,7 +14,6 @@ _PRICE_RE = re.compile(r"\d[\d,]*\s*(원|만원)")
 _PHONE_RE = re.compile(r"01[016789]-?\d{3,4}-?\d{4}")
 
 EFFORT_TARGET_LENGTH = 500
-CONFIDENCE_TARGET_LENGTH = 300
 PROMOTION_HIT_WEIGHT = 0.35
 TOXICITY_HIT_WEIGHT = 0.5
 CONTROVERSY_HIT_WEIGHT = 0.4
@@ -101,10 +100,6 @@ def _repetitiveness(tokens: list[str], recent_token_lists: list[list[str]]) -> f
     return _clamp(best)
 
 
-def _confidence(text_length: int) -> float:
-    return _clamp(text_length / CONFIDENCE_TARGET_LENGTH)
-
-
 class FeatureScorer:
     """게시글 특성 7개를 규칙 기반으로 계산한다 (LLM 호출 없음).
 
@@ -145,7 +140,6 @@ class FeatureScorer:
             "clickbait": _clickbait(title, self.clickbait_phrases),
             "controversy": _controversy(text, self.controversy_words),
             "repetitiveness": _repetitiveness(tokens, self._get_recent()),
-            "confidence": _confidence(len(title) + len(content)),
         }
 
         self._record(tokens)

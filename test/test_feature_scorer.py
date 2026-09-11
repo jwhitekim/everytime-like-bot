@@ -82,20 +82,12 @@ class FeatureScorerTests(unittest.TestCase):
         scorer.evaluate(article(title="글", content="내용"))
         self.assertEqual(len(recorded), 1)
 
-    def test_confidence_scales_with_text_length(self):
-        scorer = FeatureScorer()
-        short = scorer.evaluate(article(title="짧음", content=""))
-        long_text = scorer.evaluate(article(title="글", content="내용 " * 100))
-        self.assertLess(short["confidence"], long_text["confidence"])
-        self.assertEqual(long_text["confidence"], 1.0)
-
     def test_all_feature_keys_present(self):
         scorer = FeatureScorer()
         result = scorer.evaluate(article(title="글", content="내용"))
         expected_keys = {
             "topic_relevance", "effort", "information_density",
             "promotion", "toxicity", "clickbait", "controversy", "repetitiveness",
-            "confidence",
         }
         self.assertEqual(set(result.keys()), expected_keys)
 

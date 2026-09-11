@@ -113,8 +113,11 @@ app/
   - 전화번호 패턴 포함 (오탐 위험 낮은 명백한 광고 패턴만 대상)
   - `taste.json`의 `hard_filter.max_age_days` 설정 시 해당 일수 초과 글
 - **특성 계산** (`FeatureScorer`, `app/core/services/feature_scorer.py`): 외부 API 호출
-  없이 정규식/키워드 매칭/집합 연산만으로 특성 8개를 0.0~1.0 값으로 계산. 의미 이해가
+  없이 정규식/키워드 매칭/집합 연산만으로 특성 7개를 0.0~1.0 값으로 계산. 의미 이해가
   필요해 알고리즘으로 근거 있게 계산할 수 없는 특성(재미, 독창성, 유용성 등)은 제외했다.
+  "신뢰도(confidence)" 게이트도 같은 이유로 없앴다 — 글자수로 판단 가능 여부를 대신하면
+  일상적인 짧은 글(에브리타임 자유게시판 대다수)을 근거 없이 걸러내는 문제 발생. 실제로
+  판단 불가능한 글(빈 글, 2자 미만)은 이미 hard_filter가 앞단에서 제외 대상.
   - `topic_relevance`(선호) — `taste.json.topics` 키워드와 제목+본문의 겹침 비율.
     `topics`가 비어 있으면 중립값 0.5
   - `effort`(선호) — 본문 길이 + 문단 구분(줄바꿈 2회 이상) 여부로 계산
@@ -126,19 +129,16 @@ app/
   - `controversy`(감점) — `keywords.controversy` 블랙리스트 매칭 건수 기반
   - `repetitiveness`(감점) — 같은 게시판 최근 게시글(최대 50개, `recent_fingerprints:{board_id}`
     저장)과의 자카드 유사도 최댓값. 평가할 때마다 이번 글의 토큰을 기록에 추가
-  - `confidence` — LLM 자기 보고 대신 본문 길이 기반 함수로 계산 (제목+본문 300자
-    이상이면 1.0, 그보다 짧으면 비례해서 낮아짐 — 짧은 글은 규칙 신호의 신뢰도도 낮음)
 - **점수 계산** (`score_calculator.calculate_score`):
   - `positive_score` = 선호 특성 가중 평균 (`taste.json.preferences`)
   - `penalty_score` = 감점 특성 가중 평균 (`taste.json.penalties`)
   - `final_score` = `positive_score - penalty_score * penalty_strength`, 0.0~1.0 clamp
 - **결정** (`score_calculator.make_decision`):
   1. `hard_reject` 항목 중 하나라도 `taste.json.hard_reject` 임계값 이상이면 즉시 REJECT
-  2. `confidence < min_confidence`면 SKIP (본문이 짧아 규칙 신호를 못 미더워하는 케이스)
-  3. `final_score >= threshold`면 LIKE
-  4. `threshold - exploration <= final_score < threshold`이고 `penalty_score < 0.4`인 경우,
+  2. `final_score >= threshold`면 LIKE
+  3. `threshold - exploration <= final_score < threshold`이고 `penalty_score < 0.4`인 경우,
      30% 확률로 LIKE (탐색 목적 — 취향 프로필 과도한 고정 방지용)
-  5. 위 조건 전부 미해당 시 SKIP
+  4. 위 조건 전부 미해당 시 SKIP
 
 ### 5-2. threshold 결정 방식 2가지
 
@@ -169,7 +169,7 @@ app/
 - `penalties` — 감점 특성별 가중치 (promotion, toxicity, clickbait, controversy,
   repetitiveness)
 - `decision` — `threshold`, `strictness`, `exploration`, `penalty_strength`,
-  `min_confidence`, `target_like_rate`
+  `target_like_rate`
 - `hard_reject` — 특성별 즉시 REJECT 임계값 (선택 항목)
 - `topics` — 관심 주제 목록. `topic_relevance` 측정 시 참고 대상
 - `keywords` — 규칙 기반 특성 계산용 키워드 블랙리스트 (`toxicity`, `controversy`,

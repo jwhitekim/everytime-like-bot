@@ -111,26 +111,27 @@ def apply_hard_reject(features: dict, hard_reject_cfg: dict | None) -> str | Non
 
 def make_decision(
     score_result: dict,
-    confidence: float,
     taste_cfg: dict,
     *,
     hard_reject_reason: str | None = None,
     rng=random,
 ) -> tuple[str, str]:
-    """("LIKE" | "SKIP" | "REJECT", 이유 문자열)을 반환한다."""
+    """("LIKE" | "SKIP" | "REJECT", 이유 문자열)을 반환한다.
+
+    confidence(신뢰도) 게이트는 두지 않는다 — 규칙 기반 특성 계산에는 LLM 같은 "판단
+    가능 여부 자기 보고"가 없고, 글자수로 대신하면 캐주얼한 짧은 글(에브리타임 자유게시판의
+    대다수)을 근거 없이 걸러내게 된다. 진짜 판단 불가능한 글(빈 글, 2자 미만)은 이미
+    hard_filter가 앞단에서 제외한다.
+    """
     decision_cfg = taste_cfg.get("decision", {})
     raw_threshold = decision_cfg.get("threshold", 0.68)
     exploration = decision_cfg.get("exploration", 0.0)
-    min_confidence = decision_cfg.get("min_confidence", 0.45)
     threshold = effective_threshold(raw_threshold, decision_cfg.get("strictness", 0.0))
     final_score = score_result["final_score"]
     penalty_score = score_result["penalty_score"]
 
     if hard_reject_reason:
         return "REJECT", f"hard_reject:{hard_reject_reason}"
-
-    if confidence < min_confidence:
-        return "SKIP", f"low_confidence:{confidence:.2f}<{min_confidence:.2f}"
 
     if final_score >= threshold:
         return "LIKE", f"score {final_score:.3f} >= threshold {threshold:.3f}"

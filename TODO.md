@@ -1,8 +1,8 @@
 # TODO
 
 ## 진행 중
-
 ## 완료
+- [x] confidence(신뢰도) 게이트 완전 제거 — 글자수 기반 confidence가 짧은 글을 근거 없이 걸러내는 문제의 근본 원인
 - [x] LLM(Gemini) 특성 평가 완전 제거, 규칙/통계 기반 알고리즘으로 교체
 - [x] 프로젝트 스펙 문서 작성 (기준이 흔들리는 문제 해결용) — SPEC.md
 - [x] todo-guard 프로젝트 로컬 세팅 (setup.sh 실행, settings.json attribution 필드 복구)

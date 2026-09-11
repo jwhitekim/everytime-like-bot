@@ -68,7 +68,6 @@ DEFAULT_TASTE_CONFIG: dict[str, Any] = {
         "strictness": 0.3,
         "exploration": 0.07,
         "penalty_strength": 1.0,
-        "min_confidence": 0.45,
         # 설정하면 threshold를 고정값 대신 "최근 평가 기록 중 상위 N%" 기준으로 매번 다시
         # 계산한다 (게시판 콘텐츠 성향이 시간이 지나 바뀌어도 threshold를 수동으로 재조정할
         # 필요가 없어짐). null이면 기존처럼 threshold 고정값을 그대로 쓴다.
@@ -96,7 +95,7 @@ DEFAULT_TASTE_CONFIG: dict[str, Any] = {
 _KEYWORD_LIST_KEYS = ("toxicity", "controversy", "clickbait_phrases", "promotion_terms")
 
 # decision 항목 중 0.0~1.0로 clamp할 필드 (penalty_strength는 배율이라 제외).
-_DECISION_UNIT_RANGE_FIELDS = ("threshold", "strictness", "exploration", "min_confidence")
+_DECISION_UNIT_RANGE_FIELDS = ("threshold", "strictness", "exploration")
 _PENALTY_STRENGTH_MAX = 2.0
 
 

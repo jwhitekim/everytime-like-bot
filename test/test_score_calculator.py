@@ -20,7 +20,6 @@ def make_taste(**overrides):
             "strictness": 0.5,
             "exploration": 0.1,
             "penalty_strength": 1.0,
-            "min_confidence": 0.45,
         },
         "hard_reject": {},
     }
@@ -98,47 +97,41 @@ class ScoreCalculatorTests(unittest.TestCase):
         taste = make_taste()
         score_result = sc.calculate_score({"usefulness": 1.0, "originality": 1.0}, taste)
         decision, reason = sc.make_decision(
-            score_result, confidence=0.9, taste_cfg=taste, hard_reject_reason="toxicity"
+            score_result, taste_cfg=taste, hard_reject_reason="toxicity"
         )
         self.assertEqual(decision, "REJECT")
         self.assertIn("toxicity", reason)
 
-    def test_make_decision_skips_when_confidence_too_low(self):
-        taste = make_taste()
-        score_result = sc.calculate_score({"usefulness": 1.0, "originality": 1.0}, taste)
-        decision, _ = sc.make_decision(score_result, confidence=0.1, taste_cfg=taste)
-        self.assertEqual(decision, "SKIP")
-
     def test_make_decision_likes_above_threshold(self):
         taste = make_taste()
         score_result = sc.calculate_score({"usefulness": 1.0, "originality": 1.0}, taste)
-        decision, _ = sc.make_decision(score_result, confidence=0.9, taste_cfg=taste)
+        decision, _ = sc.make_decision(score_result, taste_cfg=taste)
         self.assertEqual(decision, "LIKE")
 
     def test_make_decision_skips_clearly_below_threshold(self):
         taste = make_taste()
         score_result = sc.calculate_score({"usefulness": 0.1, "originality": 0.1}, taste)
-        decision, _ = sc.make_decision(score_result, confidence=0.9, taste_cfg=taste)
+        decision, _ = sc.make_decision(score_result, taste_cfg=taste)
         self.assertEqual(decision, "SKIP")
 
     def test_exploration_band_can_like_with_low_penalty_and_lucky_roll(self):
         taste = make_taste(decision={
             "threshold": 0.6, "strictness": 0.0, "exploration": 0.2,
-            "penalty_strength": 1.0, "min_confidence": 0.45,
+            "penalty_strength": 1.0,
         })
         # final_score(=positive_score, penalty=0) lands inside [threshold-exploration, threshold)
         score_result = sc.calculate_score({"usefulness": 0.5, "originality": 0.5}, taste)
         self.assertTrue(0.4 <= score_result["final_score"] < 0.6)
 
-        liked, _ = sc.make_decision(score_result, confidence=0.9, taste_cfg=taste, rng=FakeRng(0.0))
-        skipped, _ = sc.make_decision(score_result, confidence=0.9, taste_cfg=taste, rng=FakeRng(0.99))
+        liked, _ = sc.make_decision(score_result, taste_cfg=taste, rng=FakeRng(0.0))
+        skipped, _ = sc.make_decision(score_result, taste_cfg=taste, rng=FakeRng(0.99))
         self.assertEqual(liked, "LIKE")
         self.assertEqual(skipped, "SKIP")
 
     def test_exploration_never_picks_high_penalty_posts(self):
         taste = make_taste(decision={
             "threshold": 0.6, "strictness": 0.0, "exploration": 0.2,
-            "penalty_strength": 0.0, "min_confidence": 0.45,
+            "penalty_strength": 0.0,
         })
         features = {"usefulness": 0.5, "originality": 0.5, "promotion": 0.9, "toxicity": 0.9}
         score_result = sc.calculate_score(features, taste)
@@ -146,7 +139,7 @@ class ScoreCalculatorTests(unittest.TestCase):
         self.assertTrue(0.4 <= score_result["final_score"] < 0.6)
         self.assertGreaterEqual(score_result["penalty_score"], sc.EXPLORATION_MAX_PENALTY)
 
-        decision, _ = sc.make_decision(score_result, confidence=0.9, taste_cfg=taste, rng=FakeRng(0.0))
+        decision, _ = sc.make_decision(score_result, taste_cfg=taste, rng=FakeRng(0.0))
         self.assertEqual(decision, "SKIP")
 
 
