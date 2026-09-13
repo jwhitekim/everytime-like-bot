@@ -19,24 +19,30 @@ def hard_filter(
     skip_keywords: list[str] | None = None,
     max_age_days: float | None = None,
 ) -> str | None:
-    """통과하면 None, 제외해야 하면 사유 문자열을 반환한다."""
-    title = (article.get("title") or "").strip()
-    content = (article.get("content") or "").strip()
+    """통과하면 None, 제외해야 하면 사유 문자열을 반환한다.
 
-    if not title and not content:
-        return "empty_content"
+    아래 세 가지는 임시로 꺼둔 상태다 (필요해지면 주석만 풀면 됨):
+    - 빈 글 체크: 실제로 극히 드물게 발생해 별도 처리 불필요 판단
+    - 건너뛸 키워드(skip_keywords): 하드 필터 대신 다시 켤 경우를 대비해 파라미터/명령어는 유지
+    - 광고 전화번호 패턴: 하드 컷 없이 score_calculator의 promotion 점수/hard_reject에 맡기기로 함
+    """
+    # title = (article.get("title") or "").strip()
+    # content = (article.get("content") or "").strip()
+    #
+    # if not title and not content:
+    #     return "empty_content"
+    #
+    # if len(title) + len(content) < MIN_CONTENT_LENGTH:
+    #     return "empty_content"
 
-    if len(title) + len(content) < MIN_CONTENT_LENGTH:
-        return "empty_content"
+    # if skip_keywords:
+    #     haystack = f"{title}\n{content}".lower()
+    #     for kw in skip_keywords:
+    #         if kw.lower() in haystack:
+    #             return f"blacklist_keyword:{kw}"
 
-    if skip_keywords:
-        haystack = f"{title}\n{content}".lower()
-        for kw in skip_keywords:
-            if kw.lower() in haystack:
-                return f"blacklist_keyword:{kw}"
-
-    if _PHONE_NUMBER_RE.search(content) or _PHONE_NUMBER_RE.search(title):
-        return "ad_pattern:phone_number"
+    # if _PHONE_NUMBER_RE.search(content) or _PHONE_NUMBER_RE.search(title):
+    #     return "ad_pattern:phone_number"
 
     if max_age_days is not None:
         created_at = parse_article_datetime(article.get("created_at", ""))

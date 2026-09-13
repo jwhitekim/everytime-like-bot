@@ -121,11 +121,12 @@ def run_vote(
             scan_limit_reached = False
 
     for item in articles_to_vote:
-        title = (item.get("title") or "").lower()
-        if skip_keywords and any(kw.lower() in title for kw in skip_keywords):
-            logging.info(f"[{item['id']}] 건너뜀 (키워드 일치): {item.get('title')}")
-            skipped += 1
-            continue
+        # 건너뛸 키워드(skip_keywords) 필터는 임시로 꺼둔 상태 — 필요해지면 주석만 풀면 됨.
+        # title = (item.get("title") or "").lower()
+        # if skip_keywords and any(kw.lower() in title for kw in skip_keywords):
+        #     logging.info(f"[{item['id']}] 건너뜀 (키워드 일치): {item.get('title')}")
+        #     skipped += 1
+        #     continue
 
         if item.get("posvote", 0) >= 1:
             logging.info(f"[{item['id']}] 건너뜀 (공감 {item['posvote']}개): {item.get('title')}")
