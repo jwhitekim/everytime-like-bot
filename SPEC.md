@@ -27,7 +27,7 @@ app/
     clients/
       everytime.py          에브리타임 비공식 API 클라이언트
     services/
-      post_filter.py        특성 계산 전 하드 필터 (광고 패턴, 빈 글, 오래된 글)
+      post_filter.py        특성 계산 전 하드 필터 (현재 오래된 글 제외만 동작 중, 5절 참조)
       feature_scorer.py     규칙/통계 기반 게시글 특성 계산 (외부 API 호출 없음)
       score_calculator.py   특성 점수 -> 최종 점수 -> LIKE(Like Decision)/SKIP(Skip Decision)/REJECT(Reject Decision) 결정
       post_evaluator.py     필터 -> 특성 계산 -> 점수 -> 결정 파이프라인 오케스트레이터
@@ -107,33 +107,39 @@ app/
   -> 없으면: hard_filter() -> feature_scorer -> score_calculator
 ```
 
-- **하드 필터** (`post_filter.hard_filter`, 특성 계산 전 사전 제외 단계):
-  - 제목+본문 공백 또는 2자 미만
-  - `skip_keywords`(`/addskip`으로 등록) 포함
-  - 전화번호 패턴 포함 (오탐 위험 낮은 명백한 광고 패턴만 대상)
-  - `taste.json`의 `hard_filter.max_age_days` 설정 시 해당 일수 초과 글
+- **하드 필터** (`post_filter.hard_filter`, 특성 계산 전 사전 제외 단계): 아래 3가지는
+  코드에 남아있지만 현재 주석 처리로 꺼둔 상태 — 판단을 사전 차단하지 않고 전부 점수
+  계산(특성 계산 + 결정)에 맡기기로 함. 필요해지면 `app/core/services/post_filter.py`
+  주석만 풀면 복원됨.
+  - (꺼짐) 제목+본문 공백 또는 2자 미만 — 실제로 극히 드문 경우라 별도 처리 불필요 판단
+  - (꺼짐) `skip_keywords`(`/addskip`으로 등록) 포함 — 명령어(`/addskip` 등)는 남아있지만
+    필터링에는 반영되지 않음
+  - (꺼짐) 전화번호 패턴 포함 — 하드 컷 없이 아래 `promotion` 점수/`hard_reject`에 맡김
+  - (동작 중) `taste.json`의 `hard_filter.max_age_days` 설정 시 해당 일수 초과 글 제외
 - **특성 계산** (`FeatureScorer`, `app/core/services/feature_scorer.py`): 외부 API 호출
-  없이 정규식/키워드 매칭/집합 연산만으로 특성 7개를 0.0~1.0 값으로 계산. 의미 이해가
-  필요해 알고리즘으로 근거 있게 계산할 수 없는 특성(재미, 독창성, 유용성 등)은 제외했다.
-  "신뢰도(confidence)" 게이트도 같은 이유로 없앴다 — 글자수로 판단 가능 여부를 대신하면
-  일상적인 짧은 글(에브리타임 자유게시판 대다수)을 근거 없이 걸러내는 문제 발생. 실제로
-  판단 불가능한 글(빈 글, 2자 미만)은 이미 hard_filter가 앞단에서 제외 대상.
+  없이 정규식/집합 연산/문자 구성비 같은 순수 통계만으로 특성 7개를 0.0~1.0 값으로 계산.
+  의미 이해가 필요한 특성(재미, 독창성, 유용성 등)은 제외했고, 욕설/광고/낚시 판단에
+  구체적인 단어 목록을 두지도 않는다 — 저장소에 그대로 노출되는 문제도 있고, 목록에
+  없는 표현은 애초에 못 잡는다는 한계도 있다. "신뢰도(confidence)" 게이트도 같은
+  이유로 없앴다 — 글자수로 판단 가능 여부를 대신하면 일상적인 짧은 글(에브리타임
+  자유게시판 대다수)을 근거 없이 걸러내는 문제 발생.
   - `topic_relevance`(선호) — `taste.json.topics` 키워드와 제목+본문의 겹침 비율.
     `topics`가 비어 있으면 중립값 0.5
   - `effort`(선호) — 본문 길이 + 문단 구분(줄바꿈 2회 이상) 여부로 계산
   - `information_density`(선호) — 고유 단어 비율 + 숫자 포함 여부
-  - `promotion`(감점) — 전화번호 패턴 + URL + 가격 패턴 + `keywords.promotion_terms`
-    키워드 매칭 건수 기반
-  - `toxicity`(감점) — `keywords.toxicity` 블랙리스트 매칭 건수 기반
-  - `clickbait`(감점) — `keywords.clickbait_phrases` 매칭 + 제목의 물음표/느낌표 개수
-  - `controversy`(감점) — `keywords.controversy` 블랙리스트 매칭 건수 기반
+  - `promotion`(감점) — 전화번호 패턴 + URL 패턴 + 가격 표기 패턴 매칭 건수 기반
+    (구조적 패턴만 사용, 홍보성 단어 목록 없음)
+  - `toxicity`(감점) — 문장 내 고립된 자음/모음 단독 표기 비율 기반 (예: "ㅅㅂ", "ㅗㅜㅑ" —
+    특정 욕설 단어를 나열하지 않고, 거친 표현에서 통계적으로 흔한 표기 패턴만 측정)
+  - `clickbait`(감점) — 제목의 물음표/느낌표 개수 + 같은 기호 반복 구간(예: "!!!") 기반
   - `repetitiveness`(감점) — 같은 게시판 최근 게시글(최대 50개, `recent_fingerprints:{board_id}`
     저장)과의 자카드 유사도 최댓값. 평가할 때마다 이번 글의 토큰을 기록에 추가
 - **점수 계산** (`score_calculator.calculate_score`):
   - `positive_score` = 선호 특성 가중 평균 (`taste.json.preferences`)
   - `penalty_score` = 감점 특성 가중 평균 (`taste.json.penalties`)
   - `final_score` = `positive_score - penalty_score * penalty_strength`, 0.0~1.0 clamp
-- **결정** (`score_calculator.make_decision`):
+- **결정** (`score_calculator.make_decision`): 결과는 LIKE(Vote Like)/SKIP(Vote Skip)/
+  REJECT(Vote Reject) 중 하나.
   1. `hard_reject` 항목 중 하나라도 `taste.json.hard_reject` 임계값 이상이면 즉시 REJECT
   2. `final_score >= threshold`면 LIKE
   3. `threshold - exploration <= final_score < threshold`이고 `penalty_score < 0.4`인 경우,
@@ -166,15 +172,14 @@ app/
 ### 6-2. `app/config/taste.json` (취향 프로필, 미존재 시 내장 기본값 적용)
 
 - `preferences` — 선호 특성별 가중치 (topic_relevance, effort, information_density)
-- `penalties` — 감점 특성별 가중치 (promotion, toxicity, clickbait, controversy,
-  repetitiveness)
+- `penalties` — 감점 특성별 가중치 (promotion, toxicity, clickbait, repetitiveness)
 - `decision` — `threshold`, `strictness`, `exploration`, `penalty_strength`,
   `target_like_rate`
 - `hard_reject` — 특성별 즉시 REJECT 임계값 (선택 항목)
-- `topics` — 관심 주제 목록. `topic_relevance` 측정 시 참고 대상
-- `keywords` — 규칙 기반 특성 계산용 키워드 블랙리스트 (`toxicity`, `controversy`,
-  `clickbait_phrases`, `promotion_terms`). 소규모 스타터 세트이므로 직접 추가/편집 전제
-- `hard_filter.max_age_days` — 해당 일수 초과 글은 특성 계산 없이 제외 (선택 항목)
+- `topics` — 관심 주제 목록. `topic_relevance` 측정 시 참고 대상. 공개 저장소에 그대로
+  올라가는 값이므로 사용자가 공개해도 무방하다고 판단한 키워드만 적을 것
+- `hard_filter.max_age_days` — 해당 일수 초과 글은 특성 계산 없이 제외 (선택 항목,
+  하드 필터 전체 목록은 5절 참조 — max_age_days 외에는 꺼둔 상태)
 
 값 검증(`_validate_taste_config`) 처리 내용: 알 수 없는 키 무시, 범위 이탈 값은 기본값으로
 대체 — 설정 파일 손상 시에도 봇 정상 동작 유지 목적.
@@ -188,7 +193,7 @@ app/
 | `etsid` | 에브리타임 세션 쿠키 |
 | `board_id` / `board_name` | 선택된 게시판 |
 | `last_article_id` | 체크포인트 (마지막 확인 최신 글 ID) |
-| `skip_keywords` | 건너뛸 키워드 목록 (JSON 배열) |
+| `skip_keywords` | 건너뛸 키워드 목록 (JSON 배열, 현재 필터링에는 미반영 — 5절 참조) |
 | `run_history` | 최근 실행 기록 (최대 30개, JSON 배열) |
 | `evaluated_post:{id}` | 게시글별 평가 결과 캐시 (특성 점수, 최종 점수, 결정, 공감 성사 여부) |
 | `recent_fingerprints:{board_id}` | repetitiveness 계산용 게시판별 최근 게시글 토큰 목록 (최대 50개) |

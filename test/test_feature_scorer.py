@@ -40,9 +40,14 @@ class FeatureScorerTests(unittest.TestCase):
         result = scorer.evaluate(article(title="문의", content="010-1234-5678로 연락주세요"))
         self.assertGreater(result["promotion"], 0.0)
 
-    def test_promotion_detects_keyword_terms(self):
-        scorer = FeatureScorer(keywords={"promotion_terms": ["카톡", "할인"]})
-        result = scorer.evaluate(article(title="할인 이벤트", content="카톡으로 문의주세요"))
+    def test_promotion_detects_url(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="공구", content="https://example.com 에서 신청"))
+        self.assertGreater(result["promotion"], 0.0)
+
+    def test_promotion_detects_price_pattern(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="판매", content="15000원에 팝니다"))
         self.assertGreater(result["promotion"], 0.0)
 
     def test_promotion_zero_for_clean_post(self):
@@ -50,20 +55,25 @@ class FeatureScorerTests(unittest.TestCase):
         result = scorer.evaluate(article(title="오늘 날씨 좋다", content="산책하기 좋은 날"))
         self.assertEqual(result["promotion"], 0.0)
 
-    def test_toxicity_detects_blocklisted_word(self):
-        scorer = FeatureScorer(keywords={"toxicity": ["병신"]})
-        result = scorer.evaluate(article(title="화남", content="진짜 병신 같다"))
+    def test_toxicity_detects_isolated_jamo(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="화남", content="ㅅㅂㅅㅂㅅㅂ 진짜"))
         self.assertGreater(result["toxicity"], 0.0)
 
-    def test_clickbait_detects_phrase_and_punctuation(self):
-        scorer = FeatureScorer(keywords={"clickbait_phrases": ["충격"]})
-        result = scorer.evaluate(article(title="충격!! 실화???", content="내용"))
+    def test_toxicity_zero_for_normal_text(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="오늘 날씨", content="산책하기 좋은 날씨네요"))
+        self.assertEqual(result["toxicity"], 0.0)
+
+    def test_clickbait_detects_punctuation_spam(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="실화냐?!?! 대박!!!", content="내용"))
         self.assertGreater(result["clickbait"], 0.0)
 
-    def test_controversy_detects_blocklisted_topic(self):
-        scorer = FeatureScorer(keywords={"controversy": ["정치"]})
-        result = scorer.evaluate(article(title="정치 얘기 좀", content="요즘 정치 실망스럽다"))
-        self.assertGreater(result["controversy"], 0.0)
+    def test_clickbait_zero_for_plain_title(self):
+        scorer = FeatureScorer()
+        result = scorer.evaluate(article(title="오늘 학식 어때요", content="내용"))
+        self.assertEqual(result["clickbait"], 0.0)
 
     def test_repetitiveness_zero_without_history(self):
         scorer = FeatureScorer()
@@ -87,7 +97,7 @@ class FeatureScorerTests(unittest.TestCase):
         result = scorer.evaluate(article(title="글", content="내용"))
         expected_keys = {
             "topic_relevance", "effort", "information_density",
-            "promotion", "toxicity", "clickbait", "controversy", "repetitiveness",
+            "promotion", "toxicity", "clickbait", "repetitiveness",
         }
         self.assertEqual(set(result.keys()), expected_keys)
 

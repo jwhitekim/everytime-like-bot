@@ -35,7 +35,7 @@ _COMMAND_LIST = (
 _PROFILE_LABELS = {
     "topic_relevance": "관심주제", "effort": "노력", "information_density": "정보 밀도",
     "promotion": "광고 회피", "toxicity": "혐오 회피", "clickbait": "낚시 회피",
-    "controversy": "논쟁 회피", "repetitiveness": "재탕 회피",
+    "repetitiveness": "재탕 회피",
 }
 
 
