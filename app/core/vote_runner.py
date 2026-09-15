@@ -76,53 +76,46 @@ def run_vote(
             time.sleep(cfg["timing"]["page_delay"])
         scan_limit_reached = final_page >= max_pages
     else:
-        _, found_idx = client.find_article(
-            target_board,
-            checkpoint_id,
-            max_pages=CHECKPOINT_SEARCH_MAX_PAGES,
-            page_delay=cfg["timing"]["page_delay"],
-        )
+        # 탐색(체크포인트 찾기)과 수집(공감 후보 모으기)을 한 번의 페이지 조회로 같이
+        # 한다 — 예전에는 먼저 find_article()로 최대 200페이지를 탐색만 하고, 못
+        # 찾으면 처음부터 다시 같은 페이지들을 조회해 수집했다 (같은 페이지를 두 번
+        # 요청하는 낭비). 체크포인트를 찾을지 여부는 끝까지 가봐야 알 수 있으므로,
+        # 일단 전부 수집해두고 결과에 따라 사후에 자른다.
+        offset = 0
+        checkpoint_found = False
+        for i in range(CHECKPOINT_SEARCH_MAX_PAGES):
+            final_page = i + 1
+            logging.info(f"[재개] {final_page}페이지 탐색 중 (체크포인트: {checkpoint_id})...")
+            page_articles = client.get_article_ids(target_board, start_num=offset)
+            if not page_articles:
+                break
+            scanned += len(page_articles)
+            if first_article_id is None:
+                first_article_id = page_articles[0]["id"]
+            for article in page_articles:
+                if article["id"] == checkpoint_id:
+                    checkpoint_found = True
+                    break
+                articles_to_vote.append(article)
+            if checkpoint_found:
+                break
+            offset += 20
+            time.sleep(cfg["timing"]["page_delay"])
 
-        if found_idx == -1:
-            # 탐색(위 find_article)은 200페이지까지 넓게 보되, 그래도 못 찾으면 실제 처리
-            # 대상은 초기 스캔과 같은 상한(max_pages)으로 좁힌다 — 여기서도 200페이지를
-            # 그대로 수집하면 글 삭제로 체크포인트를 잃은 경우마다 매번 대량으로 훑고
-            # 판단하게 되어, 애초에 max_pages를 둔 안전장치 취지가 무색해진다.
-            logging.warning("체크포인트 게시글을 찾지 못했습니다 (게시글 삭제 추정). 최근 %d페이지만 처리합니다.", max_pages)
-            checkpoint_found = False
-            for i in range(max_pages):
-                final_page = i + 1
-                page_articles = client.get_article_ids(target_board, start_num=i * 20)
-                if not page_articles:
-                    break
-                scanned += len(page_articles)
-                if first_article_id is None:
-                    first_article_id = page_articles[0]["id"]
-                articles_to_vote.extend(page_articles)
-                time.sleep(cfg["timing"]["page_delay"])
-            scan_limit_reached = final_page >= max_pages
-        else:
-            checkpoint_found = True
-            offset = 0
-            found = False
-            while not found:
-                final_page += 1
-                logging.info(f"[재개] {final_page}페이지 탐색 중 (체크포인트: {checkpoint_id})...")
-                page_articles = client.get_article_ids(target_board, start_num=offset)
-                if not page_articles:
-                    break
-                scanned += len(page_articles)
-                if first_article_id is None:
-                    first_article_id = page_articles[0]["id"]
-                for article in page_articles:
-                    if article["id"] == checkpoint_id:
-                        found = True
-                        break
-                    articles_to_vote.append(article)
-                if not found:
-                    offset += 20
-                    time.sleep(cfg["timing"]["page_delay"])
+        if checkpoint_found:
             scan_limit_reached = False
+        else:
+            # 체크포인트를 못 찾으면(게시글 삭제 추정) 탐색은 200페이지까지 했더라도,
+            # 실제 처리 대상은 초기 스캔과 같은 상한(max_pages)으로 좁힌다 — 그대로
+            # 두면 체크포인트를 잃을 때마다 대량 처리가 발생해 max_pages를 둔 안전장치
+            # 취지가 무색해진다.
+            logging.warning("체크포인트 게시글을 찾지 못했습니다 (게시글 삭제 추정). 최근 %d페이지만 처리합니다.", max_pages)
+            scan_limit_reached = final_page >= max_pages
+            if final_page > max_pages:
+                cutoff = max_pages * PAGE_NUM
+                articles_to_vote = articles_to_vote[:cutoff]
+                scanned = min(scanned, cutoff)
+                final_page = max_pages
 
     for item in articles_to_vote:
         # 건너뛸 키워드(skip_keywords) 필터는 임시로 꺼둔 상태 — 필요해지면 주석만 풀면 됨.

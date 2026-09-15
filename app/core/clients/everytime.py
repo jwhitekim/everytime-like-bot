@@ -1,6 +1,5 @@
 import re
 import logging
-import time
 from typing import Literal
 from xml.etree import ElementTree
 
@@ -67,21 +66,6 @@ class EverytimeClient:
         except Exception as e:
             logging.error(f"파싱 에러: {e}")
             return []
-
-    def find_article(self, board_id, before_article_id, max_pages=50, page_delay=0.5):
-        count = 0
-        offset = 0
-        for _ in range(max_pages):
-            articles = self.get_article_ids(board_id, start_num=offset)
-            if not articles:
-                break
-            for item in articles:
-                if item["id"] == before_article_id:
-                    return count, articles.index(item)
-                count += 1
-            offset += 20
-            time.sleep(page_delay)
-        return count, -1
 
     def get_board_list(self) -> list[dict]:
         res_text = self._post("/find/community/web", data={})

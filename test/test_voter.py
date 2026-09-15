@@ -25,26 +25,14 @@ class FakeClient:
         self.pages = pages
         self.vote_result = vote_result
         self.voted_ids = []
+        self.page_fetch_calls = []
 
     def check_session(self, board_id):
         return True
 
     def get_article_ids(self, board_id, limit_num=20, start_num=0):
+        self.page_fetch_calls.append(start_num)
         return self.pages.get(start_num, [])
-
-    def find_article(self, board_id, before_article_id, max_pages=50, page_delay=0.5):
-        count = 0
-        offset = 0
-        for _ in range(max_pages):
-            articles = self.get_article_ids(board_id, start_num=offset)
-            if not articles:
-                break
-            for idx, item in enumerate(articles):
-                if item["id"] == before_article_id:
-                    return count, idx
-                count += 1
-            offset += 20
-        return count, -1
 
     def push_vote(self, article_id):
         if self.storage.load("last_article_id") == "newest":
@@ -125,6 +113,9 @@ class VoterTests(unittest.TestCase):
         self.assertEqual(result["scanned"], 100)  # 5페이지 x 20개 = 100개 (200개가 아님)
         self.assertEqual(result["candidates"], 100)
         self.assertEqual(result["processed"], 100)
+        # 탐색과 수집을 한 번에 하므로, 같은 페이지를 두 번 요청하지 않는다
+        # (10페이지 데이터 전부 존재하지만 빈 페이지를 만나 11번째 시도에서 멈춤).
+        self.assertEqual(client.page_fetch_calls, [i * 20 for i in range(11)])
 
     def test_advances_checkpoint_to_newest_even_when_a_vote_fails(self):
         """실패한 개별 글은 이번 실행에서 포기하고, 체크포인트는 항상 이번에 확인한 최신 글로 세운다
