@@ -259,7 +259,6 @@ class VoteRunner:
 
         feature_client = FeatureScorer(
             topics=taste_cfg.get("topics"),
-            keywords=taste_cfg.get("keywords"),
             recent_fingerprints_provider=lambda: get_recent_post_fingerprints(self.target_board),
             record_fingerprint=lambda tokens: add_post_fingerprint(self.target_board, tokens),
         )
