@@ -64,8 +64,8 @@ app/
 
 | 상수 | 값 | 위치 | 용도 |
 |---|---|---|---|
-| `bot.max_pages` | 5 (기본값, `config/config.yaml`로 재정의 가능) | `app/config.py` `DEFAULTS` | 최초 실행(체크포인트 없음) 시 훑을 최대 페이지 |
-| `CHECKPOINT_SEARCH_MAX_PAGES` | 200 | `app/config.py` | 체크포인트 게시글 탐색 시 훑을 최대 페이지 |
+| `bot.max_pages` | 5 (기본값, `config/config.yaml`로 재정의 가능) | `app/config.py` `DEFAULTS` | 최초 실행(체크포인트 없음) 시 훑을 최대 페이지. 체크포인트를 못 찾았을 때 실제 처리 대상 페이지 수에도 동일하게 적용 (4-2절 2번) |
+| `CHECKPOINT_SEARCH_MAX_PAGES` | 200 | `app/config.py` | 체크포인트 게시글이 있는지 **탐색**만 할 때 훑을 최대 페이지 (탐색 결과 못 찾으면 처리는 `bot.max_pages`로 좁아짐) |
 
 ### 4-1. 초기 스캔 (체크포인트 없음, `is_initial = True`)
 
@@ -81,9 +81,10 @@ app/
    상한 소진까지 탐색 대상 — `bot.max_pages`(5) 제한과 무관.
    - 근거: 봇 재개 시점에 따라 체크포인트 글이 5페이지보다 뒤에 위치 가능. 5페이지로
      제한하면 아직 살아있는 글을 "삭제 추정"으로 오판, 5페이지 이후 쌓인 새 글 전체 누락 위험.
-2. 체크포인트 미발견 시(글 삭제 추정) `checkpoint_found = False` 처리, 체크포인트 탐색
-   상한까지 재스캔해 스캔된 범위만 후보 처리. `scan_limit_reached`는 실제로 200페이지
-   상한 도달 시에만 `True` — 게시판이 자연히 끝나 빈 페이지를 만나 멈춘 경우는 `False`.
+2. 체크포인트 미발견 시(글 삭제 추정) `checkpoint_found = False` 처리. 실제 후보 수집은
+   `bot.max_pages`(5)로 제한 — 탐색은 200페이지까지 넓게 보되, 처리 대상까지 200페이지로
+   늘리면 체크포인트를 잃을 때마다 대량 처리가 발생해 애초에 `bot.max_pages`를 둔 안전장치
+   취지와 어긋난다. `scan_limit_reached`는 5페이지 상한 도달 시 `True`.
 3. 체크포인트 발견 시 `checkpoint_found = True`. 최신 글부터 체크포인트 글 직전까지
    후보로 수집(체크포인트 글 자체는 제외 대상). 수집 루프는 페이지 상한 없음 —
    체크포인트 발견 또는 게시판 소진까지 계속.

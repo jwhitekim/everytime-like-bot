@@ -84,9 +84,13 @@ def run_vote(
         )
 
         if found_idx == -1:
-            logging.warning("체크포인트 게시글을 찾지 못했습니다 (게시글 삭제 추정). 스캔된 범위만 처리합니다.")
+            # 탐색(위 find_article)은 200페이지까지 넓게 보되, 그래도 못 찾으면 실제 처리
+            # 대상은 초기 스캔과 같은 상한(max_pages)으로 좁힌다 — 여기서도 200페이지를
+            # 그대로 수집하면 글 삭제로 체크포인트를 잃은 경우마다 매번 대량으로 훑고
+            # 판단하게 되어, 애초에 max_pages를 둔 안전장치 취지가 무색해진다.
+            logging.warning("체크포인트 게시글을 찾지 못했습니다 (게시글 삭제 추정). 최근 %d페이지만 처리합니다.", max_pages)
             checkpoint_found = False
-            for i in range(CHECKPOINT_SEARCH_MAX_PAGES):
+            for i in range(max_pages):
                 final_page = i + 1
                 page_articles = client.get_article_ids(target_board, start_num=i * 20)
                 if not page_articles:
@@ -96,7 +100,7 @@ def run_vote(
                     first_article_id = page_articles[0]["id"]
                 articles_to_vote.extend(page_articles)
                 time.sleep(cfg["timing"]["page_delay"])
-            scan_limit_reached = final_page >= CHECKPOINT_SEARCH_MAX_PAGES
+            scan_limit_reached = final_page >= max_pages
         else:
             checkpoint_found = True
             offset = 0

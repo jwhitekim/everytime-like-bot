@@ -108,18 +108,21 @@ class VoterTests(unittest.TestCase):
         self.assertEqual(storage.load("last_article_id"), "newest")
 
     def test_reports_scan_limit_when_checkpoint_is_not_found(self):
+        """체크포인트를 못 찾으면(글 삭제 추정), 실제 처리 대상은 초기 스캔과 같은
+        max_pages(5)로 제한된다 — 탐색 자체는 200페이지까지 넓게 봐도, 대량 처리로
+        이어지지는 않아야 한다."""
         storage = FakeStorage({"last_article_id": "missing"})
         pages = {
             i * 20: [article(f"post-{i}-{j}") for j in range(20)]
-            for i in range(5)
-        }
+            for i in range(10)  # 체크포인트 탐색 상한(200페이지)보다는 한참 적지만
+        }                       # 초기 스캔 상한(max_pages=5)보다는 많은 페이지
         client = FakeClient(pages, storage)
 
         result = self._run(client, storage)
 
         self.assertFalse(result["checkpoint_found"])
-        self.assertFalse(result["scan_limit_reached"])
-        self.assertEqual(result["scanned"], 100)
+        self.assertTrue(result["scan_limit_reached"])
+        self.assertEqual(result["scanned"], 100)  # 5페이지 x 20개 = 100개 (200개가 아님)
         self.assertEqual(result["candidates"], 100)
         self.assertEqual(result["processed"], 100)
 
